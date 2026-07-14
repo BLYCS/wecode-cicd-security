@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestion de stock</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #dfe2e6;
+    --text: #1c1f24;
+    --muted: #6b7280;
+    --accent: #1d6f5e;
+    --accent-dark: #0f5344;
+    --danger: #b03a2e;
+    --danger-bg: #fbeae8;
+    --warn-bg: #fff4e0;
+    --warn-text: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 16px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 14px; }
+
+  form.add-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 14px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-danger { background: var(--danger-bg); color: var(--danger); }
+  .btn-danger:hover { background: #f5d5d0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr.alert { background: var(--warn-bg); }
+  tr.alert td:first-child { border-left: 3px solid var(--warn-text); }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--warn-text);
+    color: #fff;
+    margin-left: 8px;
+  }
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; }
+  .status { font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--accent-dark); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Gestion de stock</h1>
+    <p class="sub">Interface simple consommant l'API <code>/api/produits</code></p>
+
+    <div class="card">
+      <h2>Ajouter un produit</h2>
+      <form class="add-form" id="form-ajout">
+        <div class="field">
+          <label for="nom">Nom</label>
+          <input type="text" id="nom" required>
+        </div>
+        <div class="field">
+          <label for="quantite">Quantité</label>
+          <input type="number" id="quantite" min="0" required>
+        </div>
+        <div class="field">
+          <label for="prix">Prix (FCFA)</label>
+          <input type="number" id="prix" min="0" required>
+        </div>
+        <div class="field">
+          <label for="seuilAlerte">Seuil alerte</label>
+          <input type="number" id="seuilAlerte" min="0" value="5">
+        </div>
+        <div class="field">
+          <label for="categorie">Catégorie</label>
+          <input type="text" id="categorie" placeholder="Optionnel">
+        </div>
+        <button type="submit" class="btn-primary">Ajouter</button>
+      </form>
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Produits en stock</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Quantité</th>
+            <th>Prix</th>
+            <th>Catégorie</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-produits"></tbody>
+      </table>
+      <div id="empty-msg" class="empty" style="display:none">Aucun produit pour le moment.</div>
+    </div>
+  </div>
+
+<script>
+  const API = '/api/produits';
+  const tbody = document.getElementById('tbody-produits');
+  const emptyMsg = document.getElementById('empty-msg');
+  const statusEl = document.getElementById('status');
+  const form = document.getElementById('form-ajout');
+
+  function showStatus(message, isError) {
+    statusEl.textContent = message;
+    statusEl.className = 'status ' + (isError ? 'error' : 'ok');
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  }
+
+  async function chargerProduits() {
+    try {
+      const res = await fetch(API);
+      const produits = await res.json();
+      afficherProduits(produits);
+    } catch (err) {
+      showStatus('Impossible de contacter le serveur', true);
+    }
+  }
+
+  function afficherProduits(produits) {
+    tbody.innerHTML = '';
+    emptyMsg.style.display = produits.length === 0 ? 'block' : 'none';
+
+    produits.forEach(p => {
+      const enAlerte = p.quantite <= p.seuilAlerte;
+      const tr = document.createElement('tr');
+      tr.className = enAlerte ? 'alert' : '';
+      tr.innerHTML = `
+        <td>${p.nom}${enAlerte ? '<span class="badge">Stock bas</span>' : ''}</td>
+        <td>${p.quantite}</td>
+        <td>${p.prix.toLocaleString('fr-FR')} FCFA</td>
+        <td>${p.categorie || '-'}</td>
+        <td><button class="btn-danger" data-id="${p.id}">Supprimer</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.btn-danger').forEach(btn => {
+      btn.addEventListener('click', () => supprimerProduit(btn.dataset.id));
+    });
+  }
+
+  async function supprimerProduit(id) {
+    try {
+      const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      showStatus('Produit supprimé', false);
+      chargerProduits();
+    } catch (err) {
+      showStatus('Erreur lors de la suppression', true);
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nouveauProduit = {
+      nom: document.getElementById('nom').value,
+      quantite: parseInt(document.getElementById('quantite').value, 10),
+      prix: parseInt(document.getElementById('prix').value, 10),
+      seuilAlerte: parseInt(document.getElementById('seuilAlerte').value, 10) || 5,
+      categorie: document.getElementById('categorie').value
+    };
+
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nouveauProduit)
+      });
+      if (!res.ok) throw new Error();
+      form.reset();
+      showStatus('Produit ajouté', false);
+      chargerProduits();
+    } catch (err) {
+      showStatus("Erreur lors de l'ajout", true);
+    }
+  });
+
+  chargerProduits();
+</script>
+</body>
+</html>

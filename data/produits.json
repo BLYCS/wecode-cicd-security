@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "nom": "Clavier mécanique",
+    "quantite": 25,
+    "prix": 15000,
+    "seuilAlerte": 5,
+    "categorie": "Informatique"
+  },
+  {
+    "id": 2,
+    "nom": "Souris sans fil",
+    "quantite": 3,
+    "prix": 8000,
+    "seuilAlerte": 5,
+    "categorie": "Informatique"
+  },
+  {
+    "id": 3,
+    "nom": "Casque audio",
+    "quantite": 12,
+    "prix": 20000,
+    "seuilAlerte": 4,
+    "categorie": "Audio"
+  }
+]
