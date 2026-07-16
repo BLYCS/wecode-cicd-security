@@ -1,5 +1,7 @@
 # Wecode CI/CD Security — Gestion de Stock
 
+![CI](https://github.com/BLYCS/wecode-cicd-security/actions/workflows/ci.yml/badge.svg)
+
 ## Objectif
 Projet pédagogique dans le cadre de la formation **Wecode | EPITECH**.
 L'application (une API de gestion de stock) sert de support pratique pour
@@ -39,8 +41,7 @@ Ou en mode développement (rechargement automatique) :
 npm run dev
 ```
 
-- L'interface web est accessible sur : `http://localhost:3000`
-- L'API seule (JSON) est accessible sur : `http://localhost:3000/api`
+L'API est accessible sur : `http://localhost:3000`
 
 ## Endpoints disponibles
 
